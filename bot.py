@@ -6,16 +6,15 @@ import json
 import os
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
+# Load environment variables from .env
 load_dotenv()
 
-# CONFIGURABLE (Load from environment variables)
-VIP_ROLE_ID = int(os.getenv("VIP_ROLE_ID"))  # VIP Role ID from .env
-ADMIN_ROLE_ID = int(os.getenv("ADMIN_ROLE_ID"))  # Admin Role ID from .env
+# CONFIGURABLE (Loaded from .env)
+VIP_ROLE_ID = int(os.getenv("VIP_ROLE_ID"))
+ADMIN_ROLE_ID = int(os.getenv("ADMIN_ROLE_ID"))
 LINKED_JSON_PATH = "linked.json"
 
 intents = discord.Intents.default()
-intents.message_content = False
 intents.guilds = True
 intents.members = True
 
@@ -55,12 +54,13 @@ class SteamLinkView(View):
 
 @bot.event
 async def on_ready():
-    print(f"Logged in as {bot.user}")
-    try:
-        synced = await bot.tree.sync()
-        print(f"Synced {len(synced)} slash commands.")
-    except Exception as e:
-        print(f"Failed to sync commands: {e}")
+    print(f"✅ Logged in as {bot.user}")
+    for guild in bot.guilds:
+        try:
+            await bot.tree.sync(guild=guild)
+            print(f"✅ Synced commands to guild: {guild.name}")
+        except Exception as e:
+            print(f"❌ Failed to sync commands in {guild.name}: {e}")
 
 @bot.event
 async def on_interaction(interaction: Interaction):
@@ -83,15 +83,15 @@ async def export_guids(interaction: Interaction):
     output = f"GUID={' ;'.join(steam_ids)}"
     await interaction.response.send_message(f"```{output}```", ephemeral=True)
 
-@bot.tree.command(name="sendembed", description="Send the Steam linking embed to the channel (Admin only)")
+@bot.tree.command(name="sendembed", description="Send the Steam linking embed (Admin only)")
 async def send_embed(interaction: Interaction):
     member = interaction.user
     if ADMIN_ROLE_ID not in [role.id for role in member.roles]:
         await interaction.response.send_message("❌ You do not have permission to use this command.", ephemeral=True)
         return
 
-    embed = discord.Embed(title="Link Your Steam", description="Click the button below to link your Steam account to your Discord.", color=discord.Color.purple())
-    await interaction.response.send_message(embed=embed, view=SteamLinkView())
+    embed = discord.Embed(title="Link Your Steam", description="Click the button below to link your Steam account to your Discord.", color=discord.Color.green())
+    await interaction.channel.send(embed=embed, view=SteamLinkView())
+    await interaction.response.send_message("✅ Embed sent.", ephemeral=True)
 
-# Replace this with your bot token from .env
 bot.run(os.getenv("DISCORD_TOKEN"))
